@@ -2,7 +2,7 @@ use crate::{piece::Piece, protocol::Command};
 use either::{Either, Left, Right};
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Board {
     inner: HashMap<Position, Piece>,
 }
@@ -15,13 +15,13 @@ pub struct Position {
 
 impl Board {
     #[must_use]
-    pub fn with_center(piece: Piece) -> Self {
-        let mut board = HashMap::new();
-        board.insert(Position::ORIGIN, piece);
-
-        Self { inner: board }
+    pub fn new() -> Self {
+        Self::default()
     }
 
+    ///
+    /// Retrieves a [`Piece`] at the passed in [`Position`] on the [`Board`].
+    ///
     #[must_use]
     pub fn get(&self, position: &Position) -> Option<&Piece> {
         self.inner.get(position)
@@ -33,8 +33,12 @@ impl Board {
     ///   - [`None`]: the move was invalid.
     ///   - [`Some`]: the move was valid, granting this many points.
     ///
-    #[must_use]
     pub fn place(&mut self, piece: Piece, position: Position) -> bool {
+        if self.inner.is_empty() {
+            self.inner.insert(position, piece);
+            return true;
+        }
+
         let up = Position::new(position.x, position.y - 1);
         let down = Position::new(position.x, position.y + 1);
         let left = Position::new(position.x - 1, position.y);
@@ -57,12 +61,14 @@ impl Board {
     /// Removes a [`Piece`] from the [`Board`] at the passed in [`Position`].
     /// Returns an [`Option`] representing whether a [`Piece`] was actually located at the [`Position`].
     ///
-    #[must_use]
     pub fn remove(&mut self, position: &Position) -> Option<Piece> {
         self.inner.remove(position)
     }
 
-    // #[must_use]
+    ///
+    /// Execute a [`Command`] on the [`Board`].
+    ///
+    #[must_use]
     pub fn execute(&mut self, command: Command) -> Either<bool, &Self> {
         match command {
             Command::Place(piece, position) => Left(self.place(piece, position)),
@@ -72,7 +78,7 @@ impl Board {
 }
 
 impl Position {
-    const ORIGIN: Self = Self::new(0, 0);
+    pub const ORIGIN: Self = Self::new(0, 0);
 
     #[must_use]
     pub const fn new(x: i64, y: i64) -> Self {
@@ -100,8 +106,9 @@ mod test {
     use either::Either;
 
     #[test]
-    fn board_insert() {
-        let mut board = Board::with_center(Piece::new(Circle, Red));
+    fn insert() {
+        let mut board = Board::new();
+        board.place(Piece::new(Circle, Red), Position::ORIGIN);
 
         assert!(board.place(Piece::new(Circle, Blue), Position::new(-1, 0)));
         assert!(board.place(Piece::new(Circle, Yellow), Position::new(1, 0)));
@@ -110,8 +117,9 @@ mod test {
     }
 
     #[test]
-    fn command() {
-        let mut board = Board::with_center(Piece::new(Circle, Red));
+    fn execute() {
+        let mut board = Board::new();
+        board.place(Piece::new(Circle, Red), Position::ORIGIN);
 
         assert!(matches!(
             board.execute(Command::Place(

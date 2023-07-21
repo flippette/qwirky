@@ -19,6 +19,10 @@ use nom::{
 type Input<'a> = &'a str;
 type Output<'a, O> = nom::IResult<Input<'a>, O, Error<Input<'a>>>;
 
+///
+/// Command passed in by the user interface.
+/// Syntax: `<type>:<args>`
+///
 #[derive(Debug, Clone, Copy)]
 pub enum Command {
     Place(Piece, Position),
@@ -93,31 +97,36 @@ fn color(i: Input) -> Output<Color> {
 
 #[cfg(test)]
 mod test {
-    use super::Command::{self, *};
+    use super::Command;
     use crate::{
         board::Position,
         piece::{Color::*, Piece, Shape::*},
     };
+    use nom::{error::ErrorKind, Err};
 
     #[test]
-    fn place_command() {
-        let s = "place:circle&red@0,1";
-
-        let command = Command::parse(s).unwrap();
-
-        match command {
-            Place(piece, position)
-                if piece == Piece::new(Circle, Red) && position == Position::new(0, 1) => {}
-            _ => panic!("incorrect parsing!"),
-        }
+    fn place() {
+        assert!(matches!(
+            Command::parse("place:circle&red@0,1"),
+            Ok(Command::Place(piece, position)) if piece == Piece::new(Circle, Red) && position == Position::new(0, 1),
+        ));
+        assert!(matches!(
+            Command::parse("place:star8&blue@0,2"),
+            Ok(Command::Place(piece, position)) if piece == Piece::new(Star8, Blue) && position == Position::new(0, 2),
+        ));
+        assert!(matches!(
+            Command::parse("place:star4blue0,2"),
+            Err(Err::Error(err)) if err.code == ErrorKind::Tag,
+        ));
+        assert!(matches!(
+            Command::parse("place:star4:blue&0@2"),
+            Err(Err::Error(err)) if err.code == ErrorKind::Tag,
+        ));
     }
 
     #[test]
-    fn state_command() {
-        let s = "state";
-
-        let command = Command::parse(s).unwrap();
-
-        assert!(matches!(command, State));
+    fn state() {
+        assert!(matches!(Command::parse("state"), Ok(Command::State)));
+        assert!(matches!(Command::parse("state:"), Ok(Command::State)));
     }
 }

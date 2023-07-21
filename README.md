@@ -1,3 +1,3 @@
 # `qwirky`
 
-A Qwirkle bot.
+A Qwirkle implementation.
